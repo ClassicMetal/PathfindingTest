@@ -9,16 +9,21 @@ public class AgentMovement : MonoBehaviour {
     public float cooldown;
     public int attackDmg;
     public float speed;
+    public float destinationThreshold;
 
     public Transform target;
     private NavMeshAgent agent;
 
     private enum e_unitStates { stationary, moving, attackmoving};
+    [SerializeField]
     private e_unitStates unitState;
 
     private Vector3 targetPosition;
     private bool enemyTarget = false;
     private List<GameObject> enemiesInRange;
+
+    private bool targetOccupied;
+    private GameObject occupyingAlly;
 
     private float timer;
 
@@ -45,11 +50,21 @@ public class AgentMovement : MonoBehaviour {
             else
                 enemiesInRange.RemoveAt(0);
         }
-        else if (unitState == e_unitStates.moving || enemiesInRange.Count == 0)
+        else if (agent.remainingDistance > destinationThreshold && (unitState == e_unitStates.moving || enemiesInRange.Count == 0))
             agent.Resume();
 
-        if (unitState != e_unitStates.stationary && agent.remainingDistance == 0)
-            unitState = e_unitStates.stationary;
+        /*if (unitState != e_unitStates.stationary && agent.remainingDistance <= destinationThreshold) {
+            if (agent.remainingDistance == 0)
+            {
+                agent.Stop();
+                unitState = e_unitStates.stationary;
+            }
+            else if (targetOccupied)
+            {
+                agent.Stop();
+                unitState = e_unitStates.stationary;
+            }
+        }*/
 
         if (Input.GetMouseButtonDown(1)) {
             if (Input.GetKey(KeyCode.LeftControl))
@@ -93,7 +108,13 @@ public class AgentMovement : MonoBehaviour {
             
             enemiesInRange.Add(other.gameObject);
             print("Enemy Contact: " + other.name);
-            
+        }
+        else if(other.tag == "PlayerUnit"
+            && other.GetComponent<AgentMovement>().target.position == target.position
+            && other.GetComponent<AgentMovement>().unitState == e_unitStates.stationary)
+        {
+            targetOccupied = true;
+            occupyingAlly = other.gameObject; 
         }
     }
 
@@ -106,6 +127,10 @@ public class AgentMovement : MonoBehaviour {
 
             enemiesInRange.Remove(other.gameObject);
             print("Enemy lost: " + other.name);
+        }
+        else if(other.gameObject == occupyingAlly)
+        {
+            targetOccupied = false;
         }
     }
 
